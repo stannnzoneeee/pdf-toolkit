@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Document Processor</title>
+    <!-- Link the external stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <button id="select-pdf">Process Multiple PDF Documents</button>
+        <div id="processing-indicator" class="processing-indicator" style="display: none;"></div>
+
+        <h1>PDF Document Processor</h1>
+
+        <div class="output-section">
+            <h3>Processing Results:</h3>
+            <!-- Area to display summary message -->
+            <div id="summary-message" class="status-message notification"></div>
+            <!-- Area to display errors during processing setup -->
+            <div id="error-message" class="status-message error"></div>
+            <!-- List to display individual file results -->
+            <ul id="results-list">
+                <!-- Results will be added here by JavaScript -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        // Cache DOM elements
+        const selectPdfButton = document.getElementById('select-pdf');
+        const processingIndicator = document.getElementById('processing-indicator');
+        const errorMessageDiv = document.getElementById('error-message');
+        const summaryMessageDiv = document.getElementById('summary-message');
+        const resultsList = document.getElementById('results-list');
+
+        // --- UI Update Functions ---
+
+        function setProcessingState(isProcessing, totalFiles = 0) {
+            selectPdfButton.disabled = isProcessing;
+            errorMessageDiv.style.display = 'none';
+            summaryMessageDiv.style.display = 'none';
+
+            if (isProcessing) {
+                processingIndicator.textContent = `Preparing to process ${totalFiles} file(s)...`;
+                processingIndicator.style.display = 'block';
+                resultsList.innerHTML = ''; // Clear previous results
+            } else {
+                processingIndicator.style.display = 'none';
+            }
+        }
+
+        function displayError(message) {
+            errorMessageDiv.textContent = `Error: ${message || 'An unknown error occurred'}`;
+            errorMessageDiv.style.display = 'block';
+            summaryMessageDiv.style.display = 'none';
+            processingIndicator.style.display = 'none'; // Hide processing indicator on error
+        }
+
+        function displaySummary(summary) {
+            let message = `Batch complete. Total: ${summary.totalFiles}, Successful: ${summary.successful}, Failed: ${summary.failed}.`;
+            summaryMessageDiv.textContent = message;
+            // Style summary based on whether any files failed
+            summaryMessageDiv.className = `status-message ${summary.failed === 0 ? 'notification' : 'error'}`;
+            summaryMessageDiv.style.display = 'block';
+        }
+
+        function addOrUpdateResultItem(data) {
+            const { index, total, originalFilename, status, result } = data;
+            let listItem = document.getElementById(`result-item-${index}`);
+
+            // Update overall progress indicator text while processing
+            if (status === 'processing' || !document.getElementById(`result-item-${index}`)) {
+                 processingIndicator.textContent = `Processing file ${index + 1} of ${total}: ${originalFilename}`;
+            }
+
+
+            if (!listItem) {
+                listItem = document.createElement('li');
+                listItem.id = `result-item-${index}`;
+                // Prepend new items to keep the latest visible if list overflows
+                if (resultsList.firstChild) {
+                    resultsList.insertBefore(listItem, resultsList.firstChild);
+                } else {
+                    resultsList.appendChild(listItem);
+                }
+            }
+
+            let statusClass = '';
+            let statusText = '';
+            let actionHtml = '';
+            let errorDetails = '';
+
+            switch (status) {
+                case 'processing':
+                    statusClass = 'status-processing';
+                    statusText = 'Processing';
+                    break;
+                case 'success':
+                    statusClass = 'status-success';
+                    statusText = 'Success';
+                    // Ensure result and newFilePath exist before creating action
+                    if (result && result.newFilePath) {
+                        actionHtml = `<span class="result-action" data-path="${result.newFilePath}">Show in Folder</span>`;
+                    } else {
+                         console.warn("Success status but missing result/newFilePath for:", originalFilename);
+                    }
+                    break;
+                case 'error':
+                    statusClass = 'status-error';
+                    statusText = 'Error';
+                     // Ensure result and error exist before creating details
+                    if (result && result.error) {
+                         errorDetails = `<span class="result-error-details" title="${result.error}">(${result.error})</span>`;
+                    } else {
+                         errorDetails = `<span class="result-error-details">(Unknown error)</span>`;
+                         console.warn("Error status but missing result/error details for:", originalFilename);
+                    }
+                    break;
+                default:
+                    console.warn("Unknown status received:", status);
+                    statusText = 'Unknown';
+            }
+
+            // Use textContent for filenames/errors to prevent potential XSS if names contain HTML
+            const filenameSpan = document.createElement('span');
+            filenameSpan.className = 'result-filename';
+            filenameSpan.title = originalFilename; // Tooltip for full original name
+            filenameSpan.textContent = originalFilename;
+
+            // Build inner HTML safely
+            listItem.innerHTML = `
+                ${filenameSpan.outerHTML}
+                ${errorDetails}
+                <span class="result-status ${statusClass}">${statusText}</span>
+                ${actionHtml}
+            `;
+
+            // Re-attach click listener for the action if it exists
+            const actionElement = listItem.querySelector('.result-action');
+            if (actionElement) {
+                actionElement.onclick = (e) => {
+                    // Use currentTarget to ensure we get the element the listener was attached to
+                    const filePath = e.currentTarget.getAttribute('data-path');
+                    if (filePath) {
+                        ipcRenderer.send('shell:openPath', filePath);
+                    } else {
+                        console.error('Action clicked but data-path attribute is missing or empty.');
+                    }
+                };
+            }
+        }
+
+        // --- Event Listeners ---
+
+        selectPdfButton.addEventListener('click', async () => {
+            setProcessingState(true, 0); // Initial state before knowing file count
+
+            try {
+                const filePaths = await ipcRenderer.invoke('dialog:openFile');
+
+                if (!filePaths || filePaths.length === 0) {
+                    console.log('File selection cancelled.');
+                    setProcessingState(false);
+                    return;
+                }
+
+                setProcessingState(true, filePaths.length); // Update state with file count
+
+                console.log(`Requesting processing for ${filePaths.length} files.`);
+                // Start processing, but don't wait for the summary here
+                // The summary will be displayed when the batch is fully done
+                ipcRenderer.invoke('pdf:parse', filePaths)
+                    .then(summary => {
+                        console.log('Batch processing finished. Summary:', summary);
+                        displaySummary(summary);
+                        // Final UI state reset after summary is displayed
+                        setProcessingState(false);
+                    })
+                    .catch(err => {
+                        // Catch errors specifically from the invoke call itself (rare)
+                        console.error('Error invoking pdf:parse:', err);
+                        displayError(`Failed to start processing batch: ${err.message}`);
+                        setProcessingState(false); // Reset UI on invoke error
+                    });
+
+            } catch (err) {
+                // Catch errors during file selection dialog
+                console.error('Error during file selection or IPC invoke setup:', err);
+                displayError(err.message);
+                 setProcessingState(false); // Reset UI if dialog fails
+            }
+            // Note: setProcessingState(false) is now called within the .then/.catch of the invoke
+            // or if the dialog fails/is cancelled.
+        });
+
+        // Listen for progress updates from the main process
+        ipcRenderer.on('pdf:progress', (event, data) => {
+            console.log('Progress update received:', data);
+            addOrUpdateResultItem(data);
+        });
+
+        // Initial UI state
+        setProcessingState(false);
+
+    </script>
+</body>
+</html>

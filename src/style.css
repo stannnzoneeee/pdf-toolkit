@@ -1,0 +1,139 @@
+body {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  line-height: 1.6; /* Improved readability */
+}
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+button {
+    padding: 12px 24px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem; /* Consistent font size */
+    transition: background-color 0.2s ease; /* Smooth hover effect */
+    /* Add margin for spacing when at the top */
+    margin-bottom: 20px;
+}
+button:hover {
+    background: #0056b3;
+}
+button:disabled {
+    background: #6c757d; /* Gray out when disabled */
+    cursor: not-allowed;
+}
+h1 {
+     /* Adjust margin since button is above */
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+h3 {
+    margin-top: 1.5em; /* More space above headings */
+    margin-bottom: 0.5em;
+}
+.output-section {
+    margin-top: 30px;
+}
+/* Removed single output boxes as they are not used in the final index.html */
+/* .output-box { ... } */
+/* #filename-output { ... } */
+/* pre { ... } */
+
+.status-message { /* Common base for error/notification/summary */
+    margin-top: 15px;
+    padding: 10px 15px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    display: none; /* Hide initially */
+}
+.error {
+    color: #721c24; /* Darker red text */
+    background-color: #f8d7da; /* Light red background */
+    border-color: #f5c6cb; /* Red border */
+}
+.notification { /* General success/info message */
+    color: #0f5132; /* Dark green text */
+    background-color: #d1e7dd; /* Light green background */
+    border-color: #badbcc; /* Green border */
+    /* cursor: pointer; /* Removed as only specific list items are clickable */
+}
+.processing-indicator {
+    display: block; /* Show on its own line */
+    margin-bottom: 15px;
+    font-style: italic;
+    color: #6c757d; /* Gray */
+}
+/* Styles for results list */
+#results-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    max-height: 500px;
+    overflow-y: auto;
+    background-color: #f8f9fa; /* Light background for the list */
+}
+#results-list li {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px; /* Add space between elements */
+}
+#results-list li:last-child {
+    border-bottom: none;
+}
+.result-status {
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    min-width: 80px; /* Ensure status labels align better */
+    text-align: center;
+}
+.status-success {
+    color: #155724;
+    background-color: #d4edda;
+}
+.status-error {
+    color: #721c24;
+    background-color: #f8d7da;
+}
+.status-processing {
+    color: #0c5460;
+    background-color: #d1ecf1;
+}
+.result-filename {
+    flex-grow: 1; /* Allow filename to take available space */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+.result-action {
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+.result-action:hover {
+    color: #0056b3;
+}
+.result-error-details {
+    font-size: 0.8rem;
+    color: #721c24;
+    margin-left: 5px; /* Indent error details slightly */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px; /* Limit width of error message */
+    display: inline-block; /* Needed for max-width */
+    vertical-align: middle; /* Align with filename */
+}
