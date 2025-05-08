@@ -6,9 +6,9 @@ const FormData = require('form-data');
 
 // --- SECURITY WARNING ---
 // Avoid hardcoding API keys. Use environment variables or a secure config method.
-const GEMINI_API_KEY = "AIzaSyBoU4rLXmpHiWG7BivRjczwxULVvz_3UYg"; // Replace with secure method
+const GEMINI_API_KEY = "geminiAPI_KEY"; // Replace with secure method
 // It seems you have a ConvertAPI key hardcoded here too. SECURITY WARNING applies.
-const CONVERT_API_AUTH = 'Bearer secret_zb9SXtRqDYzXYG6K'; // Replace with secure method
+const CONVERT_API_AUTH = 'APIKEY_OF_convertAPI'; // Replace with secure method
 
 let mainWindow;
 
